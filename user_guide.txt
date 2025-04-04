@@ -10,6 +10,7 @@ Cám ơn bạn đã sử dụng phần mềm Free Auto Clicker!
 - Tự động click chuột không chiếm chuột (bạn vẫn có thể sử dụng chuột bình thường)
 - Đa tab: Có thể tạo nhiều tab cho nhiều ứng dụng/cửa sổ khác nhau
 - Kéo thả tab: Sắp xếp lại thứ tự các tab bằng cách kéo và thả
+- Điều chỉnh kích thước: Kéo thả cạnh hoặc góc cửa sổ để thay đổi kích thước
 - Tùy chỉnh thời gian chờ giữa các lần click
 - Đặt số lần lặp lại (0 = vô hạn)
 
