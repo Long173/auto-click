@@ -10,8 +10,15 @@ import re
 import subprocess
 import sys
 
+# Thêm thư viện xử lý hình ảnh để thiết lập icon
+try:
+    from PIL import Image, ImageTk
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 # Phiên bản hiện tại
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 GITHUB_REPO = "Long173/auto-click"
 
 # Import các module tùy chọn
@@ -37,8 +44,12 @@ class AutoClickApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Free Auto Clicker")
-        self.root.geometry("600x470")  # Tăng chiều rộng từ 580 lên 600, tăng chiều cao từ 450 lên 470
-        self.root.resizable(False, False)
+        self.root.geometry("600x470")  # Kích thước khởi tạo
+        # Cho phép thay đổi kích thước cửa sổ
+        self.root.minsize(580, 450)  # Đặt kích thước tối thiểu cho cửa sổ
+        
+        # Thiết lập icon cho cửa sổ
+        self.set_app_icon()
         
         # Biến lưu trữ chung
         self.click_tabs = []  # Danh sách các tab click
@@ -63,6 +74,45 @@ class AutoClickApp:
         
         # Khôi phục vị trí cửa sổ nếu có
         self.restore_window_position()
+
+    def set_app_icon(self):
+        """Thiết lập icon cho cửa sổ ứng dụng"""
+        try:
+            # Đường dẫn đến file icon trong thư mục images
+            icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "images", "autoclick.ico")
+            
+            # Thông báo đường dẫn icon để debug
+            print(f"Đang tìm icon tại: {icon_path}")
+            
+            # Nếu đang chạy từ file .exe (PyInstaller), đường dẫn sẽ khác
+            if getattr(sys, 'frozen', False):
+                icon_path = os.path.join(os.path.dirname(sys.executable), "images", "autoclick.ico")
+                print(f"Chế độ frozen, tìm icon tại: {icon_path}")
+                
+            # Kiểm tra xem file icon có tồn tại không
+            if os.path.exists(icon_path):
+                print(f"Đã tìm thấy file icon: {icon_path}")
+                if HAS_PIL:
+                    # Sử dụng PIL để tạo PhotoImage
+                    icon = ImageTk.PhotoImage(Image.open(icon_path))
+                    self.root.iconphoto(True, icon)
+                    print("Đã thiết lập icon bằng PIL")
+                else:
+                    # Sử dụng tkinter mặc định
+                    try:
+                        # Đối với file .ico, phải sử dụng cách khác trong tk
+                        self.root.iconbitmap(icon_path)
+                        print("Đã thiết lập icon bằng iconbitmap")
+                    except:
+                        # Fallback to PhotoImage if iconbitmap fails
+                        print("iconbitmap thất bại, dùng PhotoImage")
+                        icon = tk.PhotoImage(file=icon_path)
+                        self.root.iconphoto(True, icon)
+                        print("Đã thiết lập icon bằng PhotoImage")
+            else:
+                print(f"Không tìm thấy file icon tại: {icon_path}")
+        except Exception as e:
+            print(f"Không thể thiết lập icon: {e}")
 
     def check_for_updates(self):
         """Kiểm tra cập nhật từ GitHub"""
@@ -1259,176 +1309,197 @@ class AutoClickApp:
     def load_auto_config(self):
         """Tự động tải cấu hình từ file lưu tự động"""
         try:
+            # Đọc file cấu hình
             if os.path.exists(self.auto_config_file):
                 with open(self.auto_config_file, "r") as f:
                     config = json.load(f)
-                
-                # Cấu hình mới với tabs và phiên bản
-                if "version" in config and "tabs" in config:
-                    tabs_config = config["tabs"]
                     
-                    # Xóa tất cả các tab hiện tại
-                    for i in range(len(self.click_tabs)):
-                        # Dừng click nếu đang chạy
-                        if self.click_tabs[0]["is_clicking"]:
-                            self.click_tabs[0]["is_clicking"] = False
-                        self.click_tab_control.forget(0)
+                # Xóa tất cả tab hiện tại
+                while self.click_tabs:
+                    self.click_tab_control.forget(0)
+                    self.click_tabs.pop(0)
                     
-                    self.click_tabs = []
+                # Tạo tab mới từ cấu hình
+                tabs_config = config.get("tabs", [])
+                for tab_config in tabs_config:
+                    tab_name = tab_config.get("name", f"Tab {len(self.click_tabs) + 1}")
+                    # Xóa kí hiệu "▶ " nếu có trong tên tab (vì tab đang không chạy khi khởi động)
+                    if tab_name.startswith("▶ "):
+                        tab_name = tab_name[2:]
+                        
+                    tab_data = self.add_click_tab(tab_name)
                     
-                    # Tạo tab mới từ cấu hình
-                    for tab_config in tabs_config:
-                        tab_name = tab_config.get("name", f"Tab {len(self.click_tabs) + 1}")
-                        # Xóa kí hiệu "▶ " nếu có trong tên tab (vì tab đang không chạy khi khởi động)
-                        if tab_name.startswith("▶ "):
-                            tab_name = tab_name[2:]
-                            
-                        tab_data = self.add_click_tab(tab_name)
-                        
-                        # Tải vị trí click
-                        tab_data["click_positions"] = []
-                        click_listbox = tab_data["widgets"]["click_listbox"]
-                        click_listbox.delete(0, tk.END)
-                        
-                        for pos in tab_config.get("click_positions", []):
-                            if isinstance(pos, dict) and "x" in pos and "y" in pos:
-                                # Định dạng mới với tên vị trí
-                                click_pos = {
-                                    "name": pos.get("name", f"Vị trí {len(tab_data['click_positions']) + 1}"),
-                                    "x": int(pos["x"]),
-                                    "y": int(pos["y"])
-                                }
-                                tab_data["click_positions"].append(click_pos)
-                                click_listbox.insert(tk.END, f"{click_pos['name']}: x={click_pos['x']}, y={click_pos['y']}")
-                            elif isinstance(pos, (list, tuple)) and len(pos) >= 2:
-                                # Định dạng cũ chỉ có tọa độ x, y
-                                x, y = int(pos[0]), int(pos[1])
-                                click_pos = {
-                                    "name": f"Vị trí {len(tab_data['click_positions']) + 1}",
-                                    "x": x,
-                                    "y": y
-                                }
-                                tab_data["click_positions"].append(click_pos)
-                                click_listbox.insert(tk.END, f"{click_pos['name']}: x={x}, y={y}")
-                        
-                        # Tải các cài đặt khác
-                        tab_data["widgets"]["delay_var"].set(str(tab_config.get("delay", 1.0)))
-                        tab_data["widgets"]["repeat_var"].set(str(tab_config.get("repeats", 0)))
-                        tab_data["require_active"] = tab_config.get("require_active", False)
-                        
-                        # Tìm cửa sổ theo tiêu đề nếu có
-                        window_title = tab_config.get("window_title", "")
-                        if window_title and HAS_WIN32:
-                            self.refresh_windows(tab_data)
-                            window_combo = tab_data["widgets"]["window_combo"]
-                            for i, title in enumerate(window_combo['values']):
-                                if title == window_title:
-                                    window_combo.current(i)
-                                    tab_data["selected_window"] = tab_data["target_windows"][i]
-                                    tab_data["widgets"]["selected_window_label"].config(text=f"Đã chọn: {title}")
-                                    break
+                    # Tải vị trí click
+                    tab_data["click_positions"] = tab_config.get("click_positions", [])
+                    click_listbox = tab_data["widgets"]["click_listbox"]
+                    click_listbox.delete(0, tk.END)
+                    
+                    # Hiển thị vị trí click trong listbox
+                    for i, pos in enumerate(tab_data["click_positions"]):
+                        pos_name = pos.get("name", f"Vị trí {i+1}")
+                        click_listbox.insert(tk.END, f"{pos_name} ({pos['x']}, {pos['y']})")
+                    
+                    # Thiết lập thông số
+                    delay = tab_config.get("delay", 1.0)
+                    tab_data["widgets"]["delay_var"].set(str(delay))
+                    tab_data["delay"] = float(delay)
+                    
+                    max_repeats = tab_config.get("max_repeats", 0)
+                    tab_data["widgets"]["repeat_var"].set(str(max_repeats))
+                    tab_data["max_repeats"] = int(max_repeats)
+                    
+                    # Khôi phục cửa sổ đã chọn nếu có thông tin
+                    if "selected_window" in tab_config and HAS_WIN32:
+                        try:
+                            if tab_config["selected_window"] is not None:
+                                # Phải tải lại cửa sổ bằng cách dùng tiêu đề và class để tìm
+                                hwnd = tab_config["selected_window"]
+                                window_title = tab_config.get("window_title", "")
+                                window_class = tab_config.get("window_class", "")
+                                
+                                # Nếu có tiêu đề hoặc class, thử tìm cửa sổ
+                                if window_title or window_class:
+                                    self.refresh_windows(tab_data)
                                     
-                # Khôi phục vị trí cửa sổ
-                self.restore_window_position()
+                                    # Hiển thị tên cửa sổ đã chọn
+                                    if window_title:
+                                        display_title = window_title
+                                        if len(display_title) > 50:
+                                            display_title = display_title[:47] + "..."
+                                        
+                                        tab_data["widgets"]["window_combo"].set(display_title)
+                                        tab_data["widgets"]["selected_window_label"].config(text=f"Cửa sổ đã chọn: {display_title}")
+                                        tab_data["selected_window"] = hwnd
+                        except Exception as e:
+                            print(f"Không thể khôi phục cửa sổ đã chọn: {e}")
+                            
+                # Chọn tab đầu tiên nếu có
+                if self.click_tabs:
+                    self.click_tab_control.select(0)
+                    self.current_tab = self.click_tabs[0]
+                else:
+                    # Nếu không có tab nào, tạo tab mặc định
+                    self.add_click_tab("Tab 1")
                 
         except Exception as e:
-            print(f"Không thể tải cấu hình tự động: {e}")
+            messagebox.showerror("Lỗi", f"Không thể tải cấu hình tự động: {e}")
+            # Nếu có lỗi, tạo tab mặc định
+            if not self.click_tabs:
+                self.add_click_tab("Tab 1")
     
     def save_auto_config(self):
-        """Tự động lưu cấu hình khi đóng phần mềm"""
+        """Lưu cấu hình vào file tự động"""
         try:
-            # Lưu cấu hình cho tất cả các tab
-            all_tabs_config = []
+            # Tạo cấu hình
+            config = {}
             
+            # Lưu các tab
+            tabs_config = []
             for tab in self.click_tabs:
-                # Lấy tiêu đề từ widget notebook
+                # Lấy tên tab từ tiêu đề tab
                 tab_idx = self.click_tabs.index(tab)
                 tab_name = self.click_tab_control.tab(tab_idx, "text")
                 
-                # Tạo cấu hình cho tab này
                 tab_config = {
                     "name": tab_name,
-                    "window_title": tab["widgets"]["window_combo"].get() if tab["selected_window"] else "",
-                    "click_positions": [{"name": pos.get("name", f"Vị trí {i+1}"), "x": pos["x"], "y": pos["y"]} 
-                                       for i, pos in enumerate(tab["click_positions"])],
-                    "delay": float(tab["widgets"]["delay_var"].get()),
-                    "repeats": int(tab["widgets"]["repeat_var"].get()),
-                    "require_active": tab["require_active"]
+                    "click_positions": tab["click_positions"],
+                    "delay": tab.get("delay", 1.0),
+                    "max_repeats": tab.get("max_repeats", 0),
+                    "selected_window": tab.get("selected_window"),
                 }
                 
-                all_tabs_config.append(tab_config)
+                # Nếu có cửa sổ được chọn, lưu thêm tiêu đề để hiển thị
+                if tab.get("selected_window") is not None and HAS_WIN32:
+                    try:
+                        # Tạo tên hiển thị cho cửa sổ
+                        window_text = win32gui.GetWindowText(tab["selected_window"])
+                        class_name = win32gui.GetClassName(tab["selected_window"])
+                        tab_config["window_title"] = window_text
+                        tab_config["window_class"] = class_name
+                    except:
+                        pass
+                
+                tabs_config.append(tab_config)
             
-            # Lưu vị trí cửa sổ
-            window_x = self.root.winfo_x()
-            window_y = self.root.winfo_y()
-            window_width = self.root.winfo_width()
-            window_height = self.root.winfo_height()
+            config["tabs"] = tabs_config
             
-            config = {
-                "version": "1.0",
-                "tabs": all_tabs_config,
-                "window_position": {
-                    "x": window_x,
-                    "y": window_y,
-                    "width": window_width,
-                    "height": window_height
-                }
-            }
-            
+            # Lưu file
             with open(self.auto_config_file, "w") as f:
-                json.dump(config, f)
-                
+                json.dump(config, f, indent=4)
         except Exception as e:
             print(f"Không thể lưu cấu hình tự động: {e}")
     
     def restore_window_position(self):
-        """Khôi phục vị trí cửa sổ từ cấu hình đã lưu"""
+        """Khôi phục vị trí cửa sổ từ lần sử dụng trước"""
         try:
-            if os.path.exists(self.auto_config_file):
-                with open(self.auto_config_file, "r") as f:
-                    config = json.load(f)
+            # Đường dẫn đến file lưu vị trí cửa sổ
+            position_file = os.path.join(os.getcwd(), "autoclick_window_position.json")
+            
+            # Nếu file tồn tại, đọc vị trí cũ
+            if os.path.exists(position_file):
+                with open(position_file, "r") as f:
+                    position_data = json.load(f)
+                    
+                # Lấy kích thước màn hình
+                screen_width = self.root.winfo_screenwidth()
+                screen_height = self.root.winfo_screenheight()
                 
-                if "window_position" in config:
-                    pos = config["window_position"]
-                    # Chờ cửa sổ được hiển thị hoàn chỉnh
-                    self.root.update_idletasks()
-                    
-                    # Đặt kích thước (nếu cần)
-                    if "width" in pos and "height" in pos:
-                        self.root.geometry(f"{pos['width']}x{pos['height']}")
-                    
-                    # Đặt vị trí cửa sổ
-                    if "x" in pos and "y" in pos:
-                        # Kiểm tra vị trí có nằm trong màn hình không
-                        screen_width = self.root.winfo_screenwidth()
-                        screen_height = self.root.winfo_screenheight()
-                        
-                        x = pos["x"]
-                        y = pos["y"]
-                        
-                        # Đảm bảo cửa sổ nằm trong màn hình
-                        if x < 0:
-                            x = 0
-                        if y < 0:
-                            y = 0
-                        if x > screen_width - 100:
-                            x = screen_width - 600  # Thay đổi từ 580 thành 600
-                        if y > screen_height - 100:
-                            y = screen_height - 470  # Thay đổi từ 450 thành 470
-                        
-                        self.root.geometry(f"+{x}+{y}")
+                # Lấy vị trí từ file
+                x = position_data.get("x", 0)
+                y = position_data.get("y", 0)
+                width = position_data.get("width", 600)
+                height = position_data.get("height", 470)
+                
+                # Đảm bảo vị trí nằm trong màn hình
+                x = max(0, min(x, screen_width - 300))
+                y = max(0, min(y, screen_height - 300))
+                
+                # Áp dụng vị trí và kích thước
+                self.root.geometry(f"{width}x{height}+{x}+{y}")
         except Exception as e:
             print(f"Không thể khôi phục vị trí cửa sổ: {e}")
     
+    def save_window_position(self):
+        """Lưu vị trí cửa sổ cho lần sau"""
+        try:
+            # Lấy vị trí hiện tại
+            geometry = self.root.geometry()
+            
+            # Phân tích chuỗi geometry
+            # Format: "WIDTHxHEIGHT+X+Y"
+            match = re.match(r"(\d+)x(\d+)\+(\d+)\+(\d+)", geometry)
+            if match:
+                width, height, x, y = map(int, match.groups())
+                
+                # Lưu vào file
+                position_data = {
+                    "x": x,
+                    "y": y,
+                    "width": width,
+                    "height": height
+                }
+                
+                position_file = os.path.join(os.getcwd(), "autoclick_window_position.json")
+                with open(position_file, "w") as f:
+                    json.dump(position_data, f)
+        except Exception as e:
+            print(f"Không thể lưu vị trí cửa sổ: {e}")
+    
     def on_closing(self):
         """Xử lý khi đóng phần mềm"""
-        # Dừng tất cả các tab đang chạy
-        for tab in self.click_tabs:
-            if tab.get("is_clicking", False):
-                tab["is_clicking"] = False
-        
-        # Lưu cấu hình tự động
-        self.save_auto_config()
+        try:
+            # Lưu vị trí cửa sổ
+            self.save_window_position()
+            
+            # Lưu cấu hình tự động trước khi thoát
+            self.save_auto_config()
+            
+            # Dừng tất cả các tab đang click
+            for tab in self.click_tabs:
+                if tab.get("is_clicking", False):
+                    tab["is_clicking"] = False
+        except Exception as e:
+            print(f"Lỗi khi lưu vị trí cửa sổ: {e}")
         
         # Đóng phần mềm
         self.root.destroy()
