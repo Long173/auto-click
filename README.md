@@ -4,7 +4,7 @@
 
 ## Demo
 
-![Demo ứng dụng Free Auto Clicker](images/@demo.png)
+![Demo ứng dụng Free Auto Clicker](images/demo.png)
 
 ## Cài đặt nhanh
 
