@@ -385,6 +385,8 @@ class AutoClickApp:
         # Bind sự kiện cuộn chuột cho Linux
         click_listbox.bind('<Button-4>', lambda e: click_listbox.yview_scroll(-1, "units"))
         click_listbox.bind('<Button-5>', lambda e: click_listbox.yview_scroll(1, "units"))
+        # Binding double-click để đổi tên vị trí
+        click_listbox.bind('<Double-1>', lambda e: self.rename_position(tab_data))
         
         # Frame nút bấm cho vị trí click - bên trái
         btn_frame = ttk.Frame(left_frame)
@@ -393,6 +395,11 @@ class AutoClickApp:
         # Bỏ nút thêm vị trí hiện tại, chỉ giữ lại thông tin phím tắt
         pos_label = ttk.Label(btn_frame, text="PgUp: Thêm vị trí")
         pos_label.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        # Nút đổi tên vị trí đã chọn
+        rename_pos_btn = ttk.Button(btn_frame, text="Đổi tên", 
+                                  command=lambda: self.rename_position(tab_data), width=8)
+        rename_pos_btn.pack(side=tk.LEFT, padx=2, pady=2)
         
         # Nút xóa vị trí đã chọn
         del_pos_btn = ttk.Button(btn_frame, text="Xóa vị trí", 
@@ -562,18 +569,72 @@ class AutoClickApp:
             
         try:
             pos = pyautogui.position()
-            tab_data["click_positions"].append(pos)
-            tab_data["widgets"]["click_listbox"].insert(tk.END, f"x={pos[0]}, y={pos[1]}")
             
-            # Cuộn xuống mục mới thêm
-            tab_data["widgets"]["click_listbox"].see(tk.END)
+            # Hiển thị hộp thoại để người dùng nhập tên cho vị trí click
+            dialog = tk.Toplevel(self.root)
+            dialog.title("Đặt tên vị trí")
+            dialog.geometry("300x120")
+            dialog.resizable(False, False)
+            dialog.transient(self.root)
+            dialog.grab_set()
             
-            # Thông báo nhỏ
-            self.root.title(f"Free Auto Clicker - Đã thêm vị trí ({pos[0]}, {pos[1]})")
-            self.root.after(1500, lambda: self.root.title("Free Auto Clicker"))
+            # Canh giữa hộp thoại với cửa sổ chính
+            self.center_dialog(dialog)
             
-            # Tự động lưu cấu hình
-            self.save_auto_config()
+            # Frame chứa các thành phần
+            frame = ttk.Frame(dialog, padding=10)
+            frame.pack(fill="both", expand=True)
+            
+            # Label và Entry để nhập tên
+            ttk.Label(frame, text="Nhập tên cho vị trí (x={}, y={}):".format(pos[0], pos[1])).pack(pady=(0, 5))
+            
+            name_var = tk.StringVar(value=f"Vị trí {len(tab_data['click_positions']) + 1}")
+            name_entry = ttk.Entry(frame, textvariable=name_var, width=30)
+            name_entry.pack(pady=5)
+            name_entry.select_range(0, tk.END)
+            name_entry.focus_set()
+            
+            # Frame chứa các nút
+            btn_frame = ttk.Frame(frame)
+            btn_frame.pack(pady=5)
+            
+            def add_and_close():
+                position_name = name_var.get().strip()
+                if not position_name:
+                    position_name = f"Vị trí {len(tab_data['click_positions']) + 1}"
+                
+                # Lưu vị trí với tên đã đặt
+                click_pos = {
+                    "name": position_name,
+                    "x": pos[0],
+                    "y": pos[1]
+                }
+                tab_data["click_positions"].append(click_pos)
+                tab_data["widgets"]["click_listbox"].insert(tk.END, f"{position_name}: x={pos[0]}, y={pos[1]}")
+                
+                # Cuộn xuống mục mới thêm
+                tab_data["widgets"]["click_listbox"].see(tk.END)
+                
+                # Thông báo nhỏ
+                self.root.title(f"Free Auto Clicker - Đã thêm vị trí '{position_name}' ({pos[0]}, {pos[1]})")
+                self.root.after(1500, lambda: self.root.title("Free Auto Clicker"))
+                
+                # Tự động lưu cấu hình
+                self.save_auto_config()
+                
+                dialog.destroy()
+            
+            # Thêm nút OK và Cancel
+            ttk.Button(btn_frame, text="OK", command=add_and_close, width=10).pack(side=tk.LEFT, padx=5)
+            ttk.Button(btn_frame, text="Hủy", command=dialog.destroy, width=10).pack(side=tk.LEFT)
+            
+            # Binding phím Enter để xác nhận
+            dialog.bind("<Return>", lambda e: add_and_close())
+            dialog.bind("<Escape>", lambda e: dialog.destroy())
+            
+            # Đợi đến khi hộp thoại đóng
+            dialog.wait_window()
+            
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể thêm vị trí chuột: {e}")
     
@@ -588,8 +649,19 @@ class AutoClickApp:
         try:
             click_listbox = tab_data["widgets"]["click_listbox"]
             selected_idx = click_listbox.curselection()[0]
+            position = tab_data["click_positions"][selected_idx]
+            position_name = position.get("name", f"Vị trí {selected_idx+1}")
+            
+            # Xóa vị trí khỏi listbox và danh sách
             click_listbox.delete(selected_idx)
             tab_data["click_positions"].pop(selected_idx)
+            
+            # Thông báo nhỏ
+            self.root.title(f"Free Auto Clicker - Đã xóa vị trí '{position_name}'")
+            self.root.after(1500, lambda: self.root.title("Free Auto Clicker"))
+            
+            # Tự động lưu cấu hình
+            self.save_auto_config()
         except (IndexError, TypeError):
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một vị trí để xóa")
     
@@ -601,8 +673,21 @@ class AutoClickApp:
         if tab_data is None:
             return
             
-        tab_data["click_positions"] = []
-        tab_data["widgets"]["click_listbox"].delete(0, tk.END)
+        if not tab_data["click_positions"]:
+            messagebox.showinfo("Thông báo", "Không có vị trí nào để xóa")
+            return
+            
+        count = len(tab_data["click_positions"])
+        if messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa tất cả {count} vị trí?"):
+            tab_data["click_positions"] = []
+            tab_data["widgets"]["click_listbox"].delete(0, tk.END)
+            
+            # Thông báo nhỏ
+            self.root.title(f"Free Auto Clicker - Đã xóa tất cả {count} vị trí")
+            self.root.after(1500, lambda: self.root.title("Free Auto Clicker"))
+            
+            # Tự động lưu cấu hình
+            self.save_auto_config()
     
     def toggle_clicking(self, tab_data=None):
         """Bắt đầu hoặc dừng quá trình tự động click"""
@@ -718,11 +803,11 @@ class AutoClickApp:
                     
                     # Click ảo (không di chuyển chuột thật)
                     if HAS_WIN32 and tab_data["selected_window"]:
-                        self.virtual_click(tab_data, pos[0], pos[1])
+                        self.virtual_click(tab_data, pos["x"], pos["y"])
                     # Nếu không có win32gui, dùng pyautogui (sẽ di chuyển chuột)
                     elif HAS_PYAUTOGUI:
                         current_pos = pyautogui.position()  # Lưu vị trí chuột hiện tại
-                        pyautogui.click(pos[0], pos[1])
+                        pyautogui.click(pos["x"], pos["y"])
                         pyautogui.moveTo(current_pos[0], current_pos[1])  # Khôi phục vị trí chuột
                     
                     # Đợi giữa các click
@@ -802,7 +887,7 @@ class AutoClickApp:
                 tab_config = {
                     "name": tab_name,
                     "window_title": tab["widgets"]["window_combo"].get() if tab["selected_window"] else "",
-                    "click_positions": [(pos[0], pos[1]) for pos in tab["click_positions"]],
+                    "click_positions": [(pos["x"], pos["y"]) for pos in tab["click_positions"]],
                     "delay": float(tab["widgets"]["delay_var"].get()),
                     "repeats": int(tab["widgets"]["repeat_var"].get()),
                     "require_active": tab["require_active"]
@@ -883,7 +968,7 @@ class AutoClickApp:
                         # Đảm bảo pos là tuple và có hai giá trị
                         if isinstance(pos, (list, tuple)) and len(pos) >= 2:
                             x, y = int(pos[0]), int(pos[1])
-                            tab_data["click_positions"].append((x, y))
+                            tab_data["click_positions"].append({"x": x, "y": y})
                             click_listbox.insert(tk.END, f"x={x}, y={y}")
                     
                     # Tải các cài đặt khác
@@ -925,7 +1010,7 @@ class AutoClickApp:
                     # Đảm bảo pos là tuple và có hai giá trị
                     if isinstance(pos, (list, tuple)) and len(pos) >= 2:
                         x, y = int(pos[0]), int(pos[1])
-                        tab_data["click_positions"].append((x, y))
+                        tab_data["click_positions"].append({"x": x, "y": y})
                         click_listbox.insert(tk.END, f"x={x}, y={y}")
                 
                 # Tải các cài đặt khác
@@ -957,73 +1042,80 @@ class AutoClickApp:
     def load_auto_config(self):
         """Tự động tải cấu hình từ file lưu tự động"""
         try:
-            with open(self.auto_config_file, "r") as f:
-                config = json.load(f)
-            
-            # Kiểm tra phiên bản
-            if "version" in config and "tabs" in config:
-                tabs_config = config["tabs"]
+            if os.path.exists(self.auto_config_file):
+                with open(self.auto_config_file, "r") as f:
+                    config = json.load(f)
                 
-                # Xóa tất cả các tab hiện tại trước khi tải cấu hình mới
-                for i in range(len(self.click_tabs)):
-                    # Dừng click nếu đang chạy
-                    if self.click_tabs[0]["is_clicking"]:
-                        self.click_tabs[0]["is_clicking"] = False
-                    self.click_tab_control.forget(0)
-                
-                self.click_tabs = []
-                
-                # Tạo tab mới từ cấu hình
-                for tab_config in tabs_config:
-                    tab_name = tab_config.get("name", f"Tab {len(self.click_tabs) + 1}")
-                    # Xóa kí hiệu "▶ " nếu có trong tên tab (vì tab đang không chạy khi khởi động)
-                    if tab_name.startswith("▶ "):
-                        tab_name = tab_name[2:]
+                # Cấu hình mới với tabs và phiên bản
+                if "version" in config and "tabs" in config:
+                    tabs_config = config["tabs"]
+                    
+                    # Xóa tất cả các tab hiện tại
+                    for i in range(len(self.click_tabs)):
+                        # Dừng click nếu đang chạy
+                        if self.click_tabs[0]["is_clicking"]:
+                            self.click_tabs[0]["is_clicking"] = False
+                        self.click_tab_control.forget(0)
+                    
+                    self.click_tabs = []
+                    
+                    # Tạo tab mới từ cấu hình
+                    for tab_config in tabs_config:
+                        tab_name = tab_config.get("name", f"Tab {len(self.click_tabs) + 1}")
+                        # Xóa kí hiệu "▶ " nếu có trong tên tab (vì tab đang không chạy khi khởi động)
+                        if tab_name.startswith("▶ "):
+                            tab_name = tab_name[2:]
+                            
+                        tab_data = self.add_click_tab(tab_name)
                         
-                    tab_data = self.add_click_tab(tab_name)
-                    
-                    # Tải vị trí click
-                    tab_data["click_positions"] = []
-                    click_listbox = tab_data["widgets"]["click_listbox"]
-                    click_listbox.delete(0, tk.END)
-                    
-                    for pos in tab_config.get("click_positions", []):
-                        # Đảm bảo pos là tuple và có hai giá trị
-                        if isinstance(pos, (list, tuple)) and len(pos) >= 2:
-                            x, y = int(pos[0]), int(pos[1])
-                            tab_data["click_positions"].append((x, y))
-                            click_listbox.insert(tk.END, f"x={x}, y={y}")
-                    
-                    # Tải các cài đặt khác
-                    tab_data["widgets"]["delay_var"].set(str(tab_config.get("delay", 1.0)))
-                    tab_data["widgets"]["repeat_var"].set(str(tab_config.get("repeats", 0)))
-                    tab_data["require_active"] = tab_config.get("require_active", False)
-                    
-                    # Tìm cửa sổ theo tiêu đề nếu có
-                    window_title = tab_config.get("window_title", "")
-                    if window_title and HAS_WIN32:
-                        self.refresh_windows(tab_data)
-                        window_combo = tab_data["widgets"]["window_combo"]
-                        for i, title in enumerate(window_combo['values']):
-                            if title == window_title:
-                                window_combo.current(i)
-                                tab_data["selected_window"] = tab_data["target_windows"][i]
-                                tab_data["widgets"]["selected_window_label"].config(text=f"Đã chọn: {title}")
-                                break
+                        # Tải vị trí click
+                        tab_data["click_positions"] = []
+                        click_listbox = tab_data["widgets"]["click_listbox"]
+                        click_listbox.delete(0, tk.END)
+                        
+                        for pos in tab_config.get("click_positions", []):
+                            if isinstance(pos, dict) and "x" in pos and "y" in pos:
+                                # Định dạng mới với tên vị trí
+                                click_pos = {
+                                    "name": pos.get("name", f"Vị trí {len(tab_data['click_positions']) + 1}"),
+                                    "x": int(pos["x"]),
+                                    "y": int(pos["y"])
+                                }
+                                tab_data["click_positions"].append(click_pos)
+                                click_listbox.insert(tk.END, f"{click_pos['name']}: x={click_pos['x']}, y={click_pos['y']}")
+                            elif isinstance(pos, (list, tuple)) and len(pos) >= 2:
+                                # Định dạng cũ chỉ có tọa độ x, y
+                                x, y = int(pos[0]), int(pos[1])
+                                click_pos = {
+                                    "name": f"Vị trí {len(tab_data['click_positions']) + 1}",
+                                    "x": x,
+                                    "y": y
+                                }
+                                tab_data["click_positions"].append(click_pos)
+                                click_listbox.insert(tk.END, f"{click_pos['name']}: x={x}, y={y}")
+                        
+                        # Tải các cài đặt khác
+                        tab_data["widgets"]["delay_var"].set(str(tab_config.get("delay", 1.0)))
+                        tab_data["widgets"]["repeat_var"].set(str(tab_config.get("repeats", 0)))
+                        tab_data["require_active"] = tab_config.get("require_active", False)
+                        
+                        # Tìm cửa sổ theo tiêu đề nếu có
+                        window_title = tab_config.get("window_title", "")
+                        if window_title and HAS_WIN32:
+                            self.refresh_windows(tab_data)
+                            window_combo = tab_data["widgets"]["window_combo"]
+                            for i, title in enumerate(window_combo['values']):
+                                if title == window_title:
+                                    window_combo.current(i)
+                                    tab_data["selected_window"] = tab_data["target_windows"][i]
+                                    tab_data["widgets"]["selected_window_label"].config(text=f"Đã chọn: {title}")
+                                    break
+                                    
+                # Khôi phục vị trí cửa sổ
+                self.restore_window_position()
                 
-                # Chọn tab đầu tiên
-                if self.click_tabs:
-                    self.click_tab_control.select(0)
-                    self.current_tab = self.click_tabs[0]
-            else:
-                # Nếu không đúng định dạng, tạo tab mặc định
-                self.add_click_tab("Tab 1")
         except Exception as e:
             print(f"Không thể tải cấu hình tự động: {e}")
-            import traceback
-            traceback.print_exc()  # In chi tiết lỗi để dễ debug
-            # Tạo tab mặc định nếu có lỗi
-            self.add_click_tab("Tab 1")
     
     def save_auto_config(self):
         """Tự động lưu cấu hình khi đóng phần mềm"""
@@ -1040,7 +1132,8 @@ class AutoClickApp:
                 tab_config = {
                     "name": tab_name,
                     "window_title": tab["widgets"]["window_combo"].get() if tab["selected_window"] else "",
-                    "click_positions": [(pos[0], pos[1]) for pos in tab["click_positions"]],
+                    "click_positions": [{"name": pos.get("name", f"Vị trí {i+1}"), "x": pos["x"], "y": pos["y"]} 
+                                       for i, pos in enumerate(tab["click_positions"])],
                     "delay": float(tab["widgets"]["delay_var"].get()),
                     "repeats": int(tab["widgets"]["repeat_var"].get()),
                     "require_active": tab["require_active"]
@@ -1138,7 +1231,7 @@ class AutoClickApp:
             tab_config = {
                 "name": tab_name,
                 "window_title": tab_data["widgets"]["window_combo"].get() if tab_data["selected_window"] else "",
-                "click_positions": [(pos[0], pos[1]) for pos in tab_data["click_positions"]],
+                "click_positions": [(pos["x"], pos["y"]) for pos in tab_data["click_positions"]],
                 "delay": float(tab_data["widgets"]["delay_var"].get()),
                 "repeats": int(tab_data["widgets"]["repeat_var"].get()),
                 "require_active": tab_data["require_active"]
@@ -1214,8 +1307,8 @@ class AutoClickApp:
             click_listbox.delete(0, tk.END)
             
             for pos in tab_config.get("click_positions", []):
-                tab_data["click_positions"].append((pos[0], pos[1]))
-                click_listbox.insert(tk.END, f"x={pos[0]}, y={pos[1]}")
+                tab_data["click_positions"].append({"x": pos["x"], "y": pos["y"]})
+                click_listbox.insert(tk.END, f"x={pos['x']}, y={pos['y']}")
             
             # Tải các cài đặt khác
             tab_data["widgets"]["delay_var"].set(str(tab_config.get("delay", 1.0)))
@@ -1405,6 +1498,84 @@ class AutoClickApp:
             if len(self.click_tabs) == 0:
                 # Nếu đã mất tất cả tab, tạo tab mặc định
                 self.add_click_tab("Tab 1")
+
+    def rename_position(self, tab_data=None):
+        """Đổi tên vị trí click đã chọn"""
+        if tab_data is None:
+            tab_data = self.current_tab
+            
+        if tab_data is None:
+            return
+            
+        try:
+            click_listbox = tab_data["widgets"]["click_listbox"]
+            selected_idx = click_listbox.curselection()[0]
+            position = tab_data["click_positions"][selected_idx]
+            old_name = position.get("name", f"Vị trí {selected_idx+1}")
+            
+            # Hiển thị hộp thoại để người dùng nhập tên mới
+            dialog = tk.Toplevel(self.root)
+            dialog.title("Đổi tên vị trí")
+            dialog.geometry("300x120")
+            dialog.resizable(False, False)
+            dialog.transient(self.root)
+            dialog.grab_set()
+            
+            # Canh giữa hộp thoại với cửa sổ chính
+            self.center_dialog(dialog)
+            
+            # Frame chứa các thành phần
+            frame = ttk.Frame(dialog, padding=10)
+            frame.pack(fill="both", expand=True)
+            
+            # Label và Entry để nhập tên
+            ttk.Label(frame, text=f"Đổi tên cho vị trí (x={position['x']}, y={position['y']}):").pack(pady=(0, 5))
+            
+            name_var = tk.StringVar(value=old_name)
+            name_entry = ttk.Entry(frame, textvariable=name_var, width=30)
+            name_entry.pack(pady=5)
+            name_entry.select_range(0, tk.END)
+            name_entry.focus_set()
+            
+            # Frame chứa các nút
+            btn_frame = ttk.Frame(frame)
+            btn_frame.pack(pady=5)
+            
+            def rename_and_close():
+                new_name = name_var.get().strip()
+                if not new_name:
+                    new_name = old_name
+                
+                # Cập nhật tên mới cho vị trí
+                position["name"] = new_name
+                
+                # Cập nhật hiển thị trong listbox
+                click_listbox.delete(selected_idx)
+                click_listbox.insert(selected_idx, f"{new_name}: x={position['x']}, y={position['y']}")
+                click_listbox.selection_set(selected_idx)
+                
+                # Thông báo nhỏ
+                self.root.title(f"Free Auto Clicker - Đã đổi tên vị trí thành '{new_name}'")
+                self.root.after(1500, lambda: self.root.title("Free Auto Clicker"))
+                
+                # Tự động lưu cấu hình
+                self.save_auto_config()
+                
+                dialog.destroy()
+            
+            # Thêm nút OK và Cancel
+            ttk.Button(btn_frame, text="OK", command=rename_and_close, width=10).pack(side=tk.LEFT, padx=5)
+            ttk.Button(btn_frame, text="Hủy", command=dialog.destroy, width=10).pack(side=tk.LEFT)
+            
+            # Binding phím Enter để xác nhận
+            dialog.bind("<Return>", lambda e: rename_and_close())
+            dialog.bind("<Escape>", lambda e: dialog.destroy())
+            
+            # Đợi đến khi hộp thoại đóng
+            dialog.wait_window()
+            
+        except (IndexError, TypeError):
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn một vị trí để đổi tên")
 
 if __name__ == "__main__":
     root = tk.Tk()
