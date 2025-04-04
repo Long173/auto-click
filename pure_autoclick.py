@@ -429,11 +429,6 @@ class AutoClickApp:
         control_frame = ttk.LabelFrame(right_frame, text="Điều khiển")
         control_frame.pack(fill="both", expand=True, padx=3, pady=3)
         
-        # Nút bắt đầu/dừng
-        start_stop_btn = ttk.Button(control_frame, text="Bắt đầu", 
-                                   command=lambda: self.toggle_clicking(tab_data), width=12)
-        start_stop_btn.pack(padx=5, pady=5)
-        
         # Thời gian chờ
         delay_frame = ttk.Frame(control_frame)
         delay_frame.pack(fill="x", padx=5, pady=5)  # Tăng padding dọc
@@ -460,6 +455,11 @@ class AutoClickApp:
         ttk.Label(count_frame, text="Đã lặp:").pack(side=tk.LEFT)
         count_label = ttk.Label(count_frame, text="0")
         count_label.pack(side=tk.RIGHT)
+        
+        # Nút bắt đầu/dừng (đặt sau phần hiển thị số lần đã lặp)
+        start_stop_btn = ttk.Button(control_frame, text="Bắt đầu", 
+                                   command=lambda: self.toggle_clicking(tab_data), width=12)
+        start_stop_btn.pack(padx=5, pady=5)
         
         # Lưu các widget vào tab_data
         widgets.update({
