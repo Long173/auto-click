@@ -2,6 +2,10 @@
 
 Ứng dụng tự động click chuột mạnh mẽ và linh hoạt cho Windows, có khả năng click đồng thời trên nhiều cửa sổ khác nhau và không chiếm chuột.
 
+## Demo
+
+![Demo ứng dụng Free Auto Clicker](images/@demo.png)
+
 ## Cài đặt nhanh
 
 1. Tải file [Free Auto Clicker.zip](https://github.com/Long173/auto-click/raw/main/Free%20Auto%20Clicker.zip) từ repository
