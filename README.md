@@ -2,6 +2,28 @@
 
 Ứng dụng tự động click chuột mạnh mẽ và linh hoạt cho Windows, có khả năng click đồng thời trên nhiều cửa sổ khác nhau và không chiếm chuột.
 
+## Cài đặt nhanh
+
+1. Tải file [Free Auto Clicker.zip](https://github.com/Long173/auto-click/raw/main/Free%20Auto%20Clicker.zip) từ repository
+2. Giải nén file zip vào vị trí mong muốn trên máy tính của bạn
+3. Mở thư mục vừa giải nén và chạy file "Run Auto Clicker.bat" hoặc chạy trực tiếp file "Free Auto Clicker.exe"
+4. Xem file `HUONG_DAN_SU_DUNG.txt` để biết thêm chi tiết về cách sử dụng
+
+### Xử lý lỗi thường gặp
+
+- **Windows SmartScreen cảnh báo**: Nếu Windows hiển thị cảnh báo "Windows protected your PC", nhấp vào "More info" và sau đó chọn "Run anyway"
+- **Lỗi không mở được file .exe**: Đảm bảo bạn đã giải nén hoàn toàn file zip trước khi chạy, không chạy trực tiếp từ bên trong file zip
+- **Lỗi thiếu file DLL**: Đảm bảo tất cả các file trong thư mục giải nén đều được giữ nguyên, không xóa bất kỳ file nào
+- **Chương trình không phản hồi**: Thử chạy với quyền administrator bằng cách nhấp chuột phải vào file .exe và chọn "Run as administrator"
+
+### Yêu cầu hệ thống cho file thực thi
+
+- Windows 10 hoặc mới hơn (đã được thử nghiệm trên Windows 10 và Windows 11)
+- Không cần cài đặt Python hoặc các thư viện phụ thuộc
+- Khoảng 15MB dung lượng đĩa trống
+- RAM khuyến nghị: tối thiểu 2GB
+- Không yêu cầu quyền administrator để chạy (trừ khi bạn gặp vấn đề về quyền truy cập)
+
 ## Tính năng
 
 - **Click không chiếm chuột**: Click vào các ứng dụng mà không làm gián đoạn thao tác chuột của bạn
