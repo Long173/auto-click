@@ -4,7 +4,7 @@
 
 ## Demo
 
-![Demo ứng dụng Free Auto Clicker](images/demo.png)
+![Demo ứng dụng Free Auto Clicker](images/@demo.png)
 
 ## Cài đặt nhanh
 
@@ -33,6 +33,7 @@
 - **Click không chiếm chuột**: Click vào các ứng dụng mà không làm gián đoạn thao tác chuột của bạn
 - **Đa tab**: Tạo nhiều tab khác nhau, mỗi tab có thể nhắm vào một cửa sổ riêng biệt
 - **Kéo thả tab**: Sắp xếp lại thứ tự các tab bằng cách kéo và thả
+- **Đặt tên vị trí click**: Gán tên có ý nghĩa cho từng vị trí click để dễ quản lý
 - **Tùy chọn thời gian**: Điều chỉnh thời gian chờ giữa các lần click
 - **Lặp lại tùy chọn**: Đặt số lần lặp lại cụ thể hoặc chọn chế độ lặp lại vô hạn
 - **Phím tắt toàn cục**: Sử dụng phím tắt để điều khiển ứng dụng từ bất kỳ đâu
@@ -44,6 +45,25 @@
 - **Home**: Bắt cửa sổ đang active hiện tại
 - **End**: Bắt đầu/dừng tự động click
 - **Page Up**: Thêm vị trí chuột hiện tại vào danh sách
+
+## Quản lý vị trí click
+
+### Thêm vị trí click
+
+1. Di chuyển chuột đến vị trí bạn muốn click
+2. Nhấn phím **Page Up** để thêm vị trí đó vào danh sách
+3. Nhập tên có ý nghĩa cho vị trí (ví dụ: "Nút Bắt đầu", "Nút Đồng ý", v.v.)
+
+### Đổi tên vị trí click
+
+1. Chọn vị trí trong danh sách 
+2. Nhấp đúp chuột hoặc nhấn nút "Đổi tên"
+3. Nhập tên mới và nhấn Enter
+
+### Xóa vị trí click
+
+- Chọn vị trí và nhấp nút "Xóa vị trí" để xóa một vị trí
+- Nhấp nút "Xóa tất cả" để xóa toàn bộ danh sách vị trí
 
 ## Yêu cầu hệ thống
 
@@ -84,6 +104,7 @@ python pure_autoclick.py
 
 1. Di chuyển chuột đến vị trí bạn muốn click
 2. Nhấn phím **Page Up** để thêm vị trí đó vào danh sách
+3. Nhập tên mô tả như "Nút Bắt đầu" hoặc "Vùng chọn" để dễ nhận biết
 
 ### Chọn cửa sổ mục tiêu
 
