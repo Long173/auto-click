@@ -1,0 +1,51 @@
+===== HƯỚNG DẪN SỬ DỤNG FREE AUTO CLICKER =====
+
+Cám ơn bạn đã sử dụng phần mềm Free Auto Clicker!
+
+----- CÁCH KHỞI ĐỘNG PHẦN MỀM -----
+1. Double-click vào file "Free Auto Clicker.exe" hoặc 
+2. Double-click vào file "Run Auto Clicker.bat"
+
+----- TÍNH NĂNG CHÍNH -----
+- Tự động click chuột không chiếm chuột (bạn vẫn có thể sử dụng chuột bình thường)
+- Đa tab: Có thể tạo nhiều tab cho nhiều ứng dụng/cửa sổ khác nhau
+- Kéo thả tab: Sắp xếp lại thứ tự các tab bằng cách kéo và thả
+- Tùy chỉnh thời gian chờ giữa các lần click
+- Đặt số lần lặp lại (0 = vô hạn)
+
+----- PHÍM TẮT -----
+- Home: Bắt cửa sổ đang active hiện tại 
+- End: Bắt đầu/dừng tự động click
+- Page Up: Thêm vị trí chuột hiện tại vào danh sách
+
+----- HƯỚNG DẪN NHANH -----
+1. THÊM VỊ TRÍ CLICK:
+   - Di chuyển chuột đến vị trí muốn click
+   - Nhấn phím Page Up để thêm vị trí
+
+2. CHỌN CỬA SỔ MỤC TIÊU:
+   - Mở cửa sổ muốn click
+   - Khi cửa sổ đó đang active, nhấn phím Home
+   - Hoặc chọn từ danh sách trong dropdown
+
+3. BẮT ĐẦU AUTO CLICK:
+   - Đặt thời gian chờ giữa các lần click
+   - Đặt số lần lặp lại (0 = vô hạn)
+   - Nhấn nút "Bắt đầu" hoặc phím End
+
+4. DỪNG AUTO CLICK:
+   - Nhấn nút "Dừng" hoặc phím End
+
+----- LƯU Ý QUAN TRỌNG -----
+- Phần mềm sử dụng kỹ thuật click ảo, không di chuyển chuột thật
+- Phím tắt Home và Page Up hoạt động từ bất kỳ ứng dụng nào
+- Tab đang chạy sẽ có ký hiệu "▶" ở trước tên
+- Cấu hình sẽ tự động lưu khi đóng phần mềm
+
+----- HỖ TRỢ VÀ BÁO LỖI -----
+Nếu bạn gặp vấn đề hoặc có câu hỏi, vui lòng liên hệ qua:
+GitHub: https://github.com/Long173/auto-click
+
+----- BẢN QUYỀN -----
+Phần mềm này được phân phối miễn phí dưới giấy phép MIT.
+© 2025 Free Auto Clicker 
