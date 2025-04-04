@@ -237,11 +237,8 @@ class AutoClickApp:
                 self.click_tab_control.tab(current_idx, text=new_name)
                 dialog.destroy()
         
-        # Tạo nút Đổi tên nổi bật hơn
-        rename_button = tk.Button(dialog, text="Đổi tên", command=rename_and_close, 
-                                width=15, bg="#4CAF50", fg="white", 
-                                relief=tk.RAISED, font=("Arial", 10, "bold"))
-        rename_button.pack(pady=10)
+        # Tạo nút Đổi tên kiểu thông thường
+        ttk.Button(dialog, text="Đổi tên", command=rename_and_close, width=15).pack(pady=10)
         
         # Enter để xác nhận
         dialog.bind("<Return>", lambda e: rename_and_close())
