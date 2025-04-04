@@ -8,10 +8,22 @@
 
 ## Cài đặt nhanh
 
-1. Tải file [Free Auto Clicker.zip](https://github.com/Long173/auto-click/raw/main/Free%20Auto%20Clicker.zip) từ repository
+1. Tải file [Free.Auto.Clicker-1.1.0.zip](https://github.com/Long173/auto-click/releases/download/v1.1.0/Free.Auto.Clicker-1.1.0.zip) từ releases
 2. Giải nén file zip vào vị trí mong muốn trên máy tính của bạn
 3. Mở thư mục vừa giải nén và chạy file "Run Auto Clicker.bat" hoặc chạy trực tiếp file "Free Auto Clicker.exe"
 4. Xem file `HUONG_DAN_SU_DUNG.txt` để biết thêm chi tiết về cách sử dụng
+
+## Phiên bản
+
+### v1.1.0 (Phiên bản hiện tại)
+- Thêm tính năng tùy chỉnh kích thước cửa sổ bằng cách kéo thả
+- Thêm tính năng đặt tên cho các vị trí click
+- Thêm tính năng kiểm tra và cài đặt cập nhật tự động
+- Thêm biểu tượng mới cho ứng dụng
+- Cải thiện giao diện người dùng
+
+### v1.0.0
+- Phiên bản đầu tiên
 
 ### Xử lý lỗi thường gặp
 
