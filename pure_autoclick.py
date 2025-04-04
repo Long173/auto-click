@@ -188,10 +188,8 @@ class AutoClickApp:
                 self.add_click_tab(name)
                 dialog.destroy()
         
-        # Tạo nút với kích thước lớn hơn và rõ ràng hơn
-        create_button = tk.Button(button_frame, text="Tạo tab", command=add_and_close, 
-                                width=15, bg="#4CAF50", fg="white", 
-                                relief=tk.RAISED, font=("Arial", 10, "bold"))
+        # Tạo nút với kích thước thông thường
+        create_button = ttk.Button(button_frame, text="Tạo tab", command=add_and_close, width=15)
         create_button.pack(pady=5)
         
         # Enter để xác nhận
@@ -239,7 +237,11 @@ class AutoClickApp:
                 self.click_tab_control.tab(current_idx, text=new_name)
                 dialog.destroy()
         
-        ttk.Button(dialog, text="Đổi tên", command=rename_and_close).pack(pady=10)
+        # Tạo nút Đổi tên nổi bật hơn
+        rename_button = tk.Button(dialog, text="Đổi tên", command=rename_and_close, 
+                                width=15, bg="#4CAF50", fg="white", 
+                                relief=tk.RAISED, font=("Arial", 10, "bold"))
+        rename_button.pack(pady=10)
         
         # Enter để xác nhận
         dialog.bind("<Return>", lambda e: rename_and_close())
@@ -273,6 +275,16 @@ class AutoClickApp:
             
         current_idx = self.click_tab_control.index(self.click_tab_control.select())
         if current_idx < 0 or current_idx >= len(self.click_tabs):
+            return
+            
+        # Lấy tên tab để hiển thị trong thông báo xác nhận
+        tab_name = self.click_tab_control.tab(current_idx, "text")
+        # Loại bỏ kí hiệu nếu đang chạy
+        if tab_name.startswith("▶ "):
+            tab_name = tab_name[2:]
+            
+        # Hiển thị hộp thoại xác nhận
+        if not messagebox.askyesno("Xác nhận xóa", f"Bạn có chắc muốn xóa tab '{tab_name}'?"):
             return
             
         # Dừng click nếu đang chạy
