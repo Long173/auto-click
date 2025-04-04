@@ -5,6 +5,14 @@ import time
 import json
 import os
 import datetime
+import urllib.request
+import re
+import subprocess
+import sys
+
+# Phiên bản hiện tại
+APP_VERSION = "1.0.0"
+GITHUB_REPO = "Long173/auto-click"
 
 # Import các module tùy chọn
 try:
@@ -55,7 +63,200 @@ class AutoClickApp:
         
         # Khôi phục vị trí cửa sổ nếu có
         self.restore_window_position()
+
+    def check_for_updates(self):
+        """Kiểm tra cập nhật từ GitHub"""
+        try:
+            # Hiển thị thông báo đang kiểm tra
+            self.root.title("Free Auto Clicker - Đang kiểm tra cập nhật...")
+            
+            # Tạo luồng riêng để kiểm tra cập nhật
+            update_thread = threading.Thread(target=self._check_updates_thread, daemon=True)
+            update_thread.start()
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể kiểm tra cập nhật: {e}")
+            self.root.title("Free Auto Clicker")
+
+    def _check_updates_thread(self):
+        """Kiểm tra cập nhật trong một luồng riêng biệt"""
+        try:
+            # Lấy phiên bản mới nhất từ GitHub
+            latest_version = self.get_latest_version()
+            
+            # Chuyển về UI thread để cập nhật giao diện
+            self.root.after(0, lambda: self._handle_update_check_result(latest_version))
+        except Exception as e:
+            self.root.after(0, lambda: messagebox.showerror("Lỗi", f"Không thể kiểm tra cập nhật: {e}"))
+            self.root.after(0, lambda: self.root.title("Free Auto Clicker"))
+
+    def _handle_update_check_result(self, latest_version):
+        """Xử lý kết quả kiểm tra cập nhật"""
+        self.root.title("Free Auto Clicker")
         
+        if not latest_version:
+            messagebox.showinfo("Kiểm tra cập nhật", "Không thể lấy thông tin phiên bản mới nhất.")
+            return
+            
+        # So sánh phiên bản
+        current_version_parts = [int(x) for x in APP_VERSION.split(".")]
+        latest_version_parts = [int(x) for x in latest_version.split(".")]
+        
+        # So sánh từng phần của phiên bản
+        needs_update = False
+        for i in range(max(len(current_version_parts), len(latest_version_parts))):
+            current_part = current_version_parts[i] if i < len(current_version_parts) else 0
+            latest_part = latest_version_parts[i] if i < len(latest_version_parts) else 0
+            
+            if latest_part > current_part:
+                needs_update = True
+                break
+            elif latest_part < current_part:
+                # Phiên bản hiện tại cao hơn (có thể đang dùng bản thử nghiệm)
+                break
+        
+        if needs_update:
+            if messagebox.askyesno("Cập nhật mới", 
+                                 f"Đã có phiên bản mới: {latest_version}\n"
+                                 f"Phiên bản hiện tại: {APP_VERSION}\n\n"
+                                 "Bạn có muốn tải xuống và cài đặt phiên bản mới không?"):
+                self.download_and_install_update(latest_version)
+        else:
+            messagebox.showinfo("Kiểm tra cập nhật", 
+                              f"Bạn đang sử dụng phiên bản mới nhất ({APP_VERSION}).")
+
+    def get_latest_version(self):
+        """Lấy phiên bản mới nhất từ GitHub thông qua tags"""
+        try:
+            # Lấy danh sách tags từ GitHub API
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/tags"
+            with urllib.request.urlopen(url, timeout=10) as response:
+                data = json.loads(response.read().decode())
+                
+            # Lấy tag mới nhất
+            if data:
+                # Lọc các tag có định dạng v1.0.0 hoặc 1.0.0
+                version_tags = []
+                for tag in data:
+                    tag_name = tag['name']
+                    # Loại bỏ 'v' ở đầu nếu có
+                    if tag_name.startswith('v'):
+                        tag_name = tag_name[1:]
+                        
+                    # Kiểm tra xem tag có phải là phiên bản không
+                    if re.match(r'^\d+\.\d+\.\d+$', tag_name):
+                        version_tags.append(tag_name)
+                
+                if version_tags:
+                    # Sắp xếp theo phiên bản và lấy phiên bản mới nhất
+                    version_tags.sort(key=lambda v: [int(x) for x in v.split('.')])
+                    return version_tags[-1]
+            
+            return None
+        except Exception as e:
+            print(f"Lỗi khi lấy phiên bản mới nhất: {e}")
+            return None
+            
+    def download_and_install_update(self, version):
+        """Tải xuống và cài đặt bản cập nhật"""
+        try:
+            # Hiển thị thông báo đang tải
+            self.root.title("Free Auto Clicker - Đang tải bản cập nhật...")
+            
+            # Tạo thread mới để tải xuống và cài đặt
+            update_thread = threading.Thread(
+                target=lambda: self._download_and_install_thread(version),
+                daemon=True
+            )
+            update_thread.start()
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể tải bản cập nhật: {e}")
+            self.root.title("Free Auto Clicker")
+            
+    def _download_and_install_thread(self, version):
+        """Tải xuống và cài đặt trong một thread riêng"""
+        try:
+            # Tạo đường dẫn tải xuống
+            download_url = f"https://github.com/{GITHUB_REPO}/releases/download/v{version}/Free.Auto.Clicker.zip"
+            download_path = os.path.join(os.environ.get('TEMP', os.getcwd()), f"Free.Auto.Clicker-{version}.zip")
+            
+            # Tải xuống file
+            with urllib.request.urlopen(download_url, timeout=30) as response, open(download_path, 'wb') as out_file:
+                total_size = int(response.info().get('Content-Length', 0))
+                downloaded = 0
+                block_size = 8192
+                
+                while True:
+                    buffer = response.read(block_size)
+                    if not buffer:
+                        break
+                    
+                    downloaded += len(buffer)
+                    out_file.write(buffer)
+                    
+                    # Cập nhật tiêu đề cửa sổ hiển thị tiến trình
+                    if total_size > 0:
+                        percent = int(downloaded * 100 / total_size)
+                        self.root.after(0, lambda: self.root.title(f"Free Auto Clicker - Đang tải: {percent}%"))
+            
+            # Hoàn tất tải xuống, chuẩn bị cài đặt
+            self.root.after(0, lambda: self.root.title("Free Auto Clicker - Chuẩn bị cài đặt..."))
+            
+            # Lưu tất cả cấu hình hiện tại
+            self.save_auto_config()
+            
+            # Tạo file batch để giải nén và khởi động lại ứng dụng
+            updater_script = os.path.join(os.environ.get('TEMP', os.getcwd()), "autoclick_updater.bat")
+            
+            # Xác định đường dẫn hiện tại của ứng dụng
+            app_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+            
+            # Tạo nội dung script cập nhật
+            with open(updater_script, 'w') as f:
+                f.write('@echo off\n')
+                f.write('echo Dang cap nhat Free Auto Clicker...\n')
+                f.write(f'timeout /t 2 /nobreak > nul\n')  # Đợi 2 giây
+                f.write(f'if exist "{download_path}" (\n')
+                # Tạo thư mục tạm để giải nén
+                f.write(f'  mkdir "{os.path.join(os.environ.get("TEMP", os.getcwd()), "autoclick_update")}"\n')
+                # Dùng powershell để giải nén vì được tích hợp sẵn trong Windows
+                f.write(f'  powershell -command "Expand-Archive -Path \'{download_path}\' -DestinationPath \'{os.path.join(os.environ.get("TEMP", os.getcwd()), "autoclick_update")}\' -Force"\n')
+                # Sao chép các file từ thư mục giải nén vào thư mục ứng dụng
+                f.write(f'  xcopy /Y /E /I "{os.path.join(os.environ.get("TEMP", os.getcwd()), "autoclick_update", "dist")}\\*" "{app_path}"\n')
+                # Xóa file tạm
+                f.write(f'  rmdir /S /Q "{os.path.join(os.environ.get("TEMP", os.getcwd()), "autoclick_update")}"\n')
+                f.write(f'  del "{download_path}"\n')
+                # Khởi động lại ứng dụng
+                f.write(f'  start "" "{os.path.join(app_path, "Free Auto Clicker.exe")}"\n')
+                f.write(') else (\n')
+                f.write('  echo Khong tim thay file cap nhat!\n')
+                f.write(')\n')
+                f.write('del "%~f0"\n')  # Tự xóa script
+            
+            # Thông báo người dùng
+            self.root.after(0, lambda: messagebox.showinfo("Cập nhật", 
+                "Quá trình cập nhật sẽ bắt đầu khi bạn đóng ứng dụng. Ứng dụng sẽ tự động khởi động lại sau khi cập nhật hoàn tất."))
+            
+            # Đăng ký hàm khởi chạy updater khi đóng ứng dụng
+            self.root.after(0, lambda: self.prepare_for_update(updater_script))
+            
+        except Exception as e:
+            self.root.after(0, lambda: messagebox.showerror("Lỗi", f"Không thể tải bản cập nhật: {e}"))
+            self.root.after(0, lambda: self.root.title("Free Auto Clicker"))
+            
+    def prepare_for_update(self, updater_script):
+        """Chuẩn bị cập nhật và đóng ứng dụng"""
+        # Lưu cấu hình
+        self.save_auto_config()
+        
+        # Khởi chạy script cập nhật
+        subprocess.Popen(['cmd', '/c', updater_script], shell=True, 
+                        creationflags=subprocess.CREATE_NEW_CONSOLE, 
+                        start_new_session=True)
+        
+        # Đóng ứng dụng
+        self.root.destroy()
+        sys.exit(0)
+    
     def create_ui(self):
         # Tab Control chính
         self.main_tab_control = ttk.Notebook(self.root)
@@ -118,10 +319,17 @@ class AutoClickApp:
         info_frame = ttk.LabelFrame(self.settings_tab, text="Thông tin")
         info_frame.pack(fill="x", padx=5, pady=5)
         
-        ttk.Label(info_frame, text="Free Auto Clicker - Phiên bản 1.0").pack(anchor=tk.W, padx=5, pady=2)
+        ttk.Label(info_frame, text=f"Free Auto Clicker - Phiên bản {APP_VERSION}").pack(anchor=tk.W, padx=5, pady=2)
         ttk.Label(info_frame, text="Phần mềm tự động click không chiếm chuột").pack(anchor=tk.W, padx=5, pady=2)
         ttk.Label(info_frame, text="Phím tắt Home và Page Up hoạt động cả khi cửa sổ phần mềm không được chọn").pack(anchor=tk.W, padx=5, pady=2)
         ttk.Label(info_frame, text="Kéo và thả để thay đổi vị trí các tab").pack(anchor=tk.W, padx=5, pady=2)
+        
+        # Thêm nút kiểm tra cập nhật
+        update_frame = ttk.Frame(self.settings_tab)
+        update_frame.pack(fill="x", padx=5, pady=10)
+        
+        ttk.Button(update_frame, text="Kiểm tra cập nhật", 
+                  command=self.check_for_updates, width=20).pack(pady=5)
         
         # Đăng ký phím tắt toàn cục
         self.register_global_hotkeys()
